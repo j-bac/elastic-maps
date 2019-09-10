@@ -127,7 +127,7 @@ def EM(
     TotalWeight = np.sum(weights,axis=0) 
     weigh = weights 
     pFunc = [] 
-    
+
     # Analyse PQSQ request
     if not(func==[]):
         if intervals==[]:
@@ -191,8 +191,8 @@ def EM(
         [dist, ass] = _map.associate(nodes, data) 
         # Find indices for PQSQ if required
         if not(pFunc==[]):
-            [_, qInd] = histc(dist,pFunc.sqint) 
-            weigh = weights * pFunc.A[qInd].T 
+            qInd = np.digitize(dist,pFunc.sqint)-1
+            weigh =  weights * pFunc.A[qInd][:,None]
 
         # If nothing has changed then we have end of epoch
         if np.all(oldAss == ass) and np.all(oldQInd == qInd):
@@ -256,36 +256,36 @@ def definePotentialdef(
     #       defs coefficients
     class empty_class:
         pass
+
     potentialdef = empty_class()
     p = int(number_of_intervals - 1) 
     
     #intervals is the product of row and maximal coefficient multiplied by delta:
-    intervals = (x * delta) * (np.array(range(p)) / p) ** 2 
+    intervals = (x * delta) * (np.array(range(p+1)) / p) ** 2 
     
-    potentialdef.intervals = [intervals, np.inf] 
+    potentialdef.intervals = np.concatenate([intervals, np.array([np.inf])],axis=None) 
     potentialdef.sqint = potentialdef.intervals ** 2 
     [potentialdef.A,potentialdef.B] = computeABcoefficients(intervals, potential_def_handle) 
     return potentialdef
 
 def computeABcoefficients(intervals, potential_def_handle):
-#PQSQR_computeABcoefficients calculates the coefficients a and b for
-#quadratic fragments of potential def.
-#   intervals is the 1-by-K matrix of intervals' boundaries without final
-#       infinit boundary.
-#   potential_def_handle is a handle of majorant def.
-
+    #PQSQR_computeABcoefficients calculates the coefficients a and b for
+    #quadratic fragments of potential def.
+    #   intervals is the 1-by-K matrix of intervals' boundaries without final
+    #       infinity boundary.
+    #   potential_def_handle is a handle of majorant def.
     #Get dimensions of intervals
-    p = intervals.shape[1] 
+    p = len(intervals)
 
     #Preallocate memory
-    A = np.zeros(1,p) 
-    B = np.zeros(1,p) 
+    A = np.zeros(p) 
+    B = np.zeros(p) 
 
     #Calculate value of def all boundaries
     pxk = potential_def_handle(intervals) 
     sxk = intervals**2 
 
-    A[1:p-1] = (pxk[:p]-pxk[1:p+1])/(sxk[:p]-sxk[1:p+1]) 
-    B[1:p-1] = (pxk[1:p+1]*sxk[:p]-pxk[:p]*sxk[1:p+1]) / (sxk[:p]-sxk[1:p+1]) 
-    B[p] = pxk[p] 
+    A[:p-1] = (pxk[:p-1]-pxk[1:p])/(sxk[:p-1]-sxk[1:p]) 
+    B[:p-1] = (pxk[1:p]*sxk[:p-1]-pxk[:p-1]*sxk[1:p]) / (sxk[:p-1]-sxk[1:p]) 
+    B[p-1] = pxk[p-1] 
     return A,B
